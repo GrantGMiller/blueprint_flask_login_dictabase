@@ -1,5 +1,5 @@
-from flask import Flask, render_template
-from blueprint_flask_login_dictabase import (
+from flask import Flask, render_template, flash
+from flask_login_dictabase_blueprint import (
     bp,
     VerifyLogin,
     VerifyAdmin,
@@ -37,25 +37,27 @@ AddAdmin('grant@grant-miller.com')
 def Admin():
     return render_template(
         'admin.html',
-        users=GetUsers()
+        users=GetUsers(),
+        user=GetUser(),
     )
 
 
 @NewUser
 def NewUserCallback(user):
     print('NewUserCallback(user=', user)
+    flash(f'Welcome new user {user["email"]}')
 
 
 @ForgotPassword
 def ForgotPasswordCallback(user, forgotURL):
     print('ForgotPasswordCallback(user=', user, forgotURL)
-    # Send an email with the forgotURL to the user
+    flash('Send an email with the forgotURL to the user', 'info')
 
 
 @MagicLink
 def MagicLinkCallback(user, magicLink):
     print('MagicLinkCallback(user=', user, magicLink)
-    # Send an email with the magic link to the user
+    flash('Send an email with the magic link to the user', 'info')
 
 
 if __name__ == '__main__':

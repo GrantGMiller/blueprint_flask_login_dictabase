@@ -15,13 +15,6 @@ bp = Blueprint('login', __name__, template_folder='templates')
 
 
 class UserClass(flask_login.UserMixin, flask_dictabase.BaseTable):
-    '''
-    OTHER KEYS
-
-    authToken - unique 512 char string
-    lastAuthTokenTime - datatime.datetime that authToken was issued
-    '''
-
     def get_id(self, *a, **k):
         print('UserClass.get_id(', a, k, self)
         return self['id']
