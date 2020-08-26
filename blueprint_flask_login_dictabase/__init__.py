@@ -239,16 +239,13 @@ def MagicLinkLogin():
 def GetUser(email=None):
     # return user object if logged in, else return None
     # if user provides an email then return that user obj
-    print('GetUser(', email)
     if email:
         return app.db.FindOne(UserClass, email=email)
 
     user = flask_login.current_user
-    print('GetUser user=', user)
-    if user.is_authenticated is False:
+    if user.is_anonymous:
         return None
-    else:
-        return user
+    return user
 
 
 def VerifyLogin(func):
@@ -259,6 +256,18 @@ def VerifyLogin(func):
     '''
 
     return flask_login.login_required(func)
+
+
+def VerifyAdmin(func):
+    def NewFunc(*a, **k):
+        user = GetUser()
+        if user and user['email'] in admins:
+            return func(*a, **k)
+        else:
+            flash('You are not an admin.', 'danger')
+            return redirect('/')
+
+    return NewFunc
 
 
 newUserCallback = None
@@ -296,3 +305,14 @@ def HashIt(strng, salt=''):
     hash1 += salt
     hash2 = hashlib.sha512(bytes(hash1, 'utf-8')).hexdigest()
     return hash2
+
+
+admins = set()
+
+
+def AddAdmin(email):
+    admins.add(email.lower())
+
+
+def GetUsers():
+    return app.db.FindAll(UserClass)
