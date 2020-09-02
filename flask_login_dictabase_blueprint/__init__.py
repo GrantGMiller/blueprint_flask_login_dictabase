@@ -1,3 +1,5 @@
+import functools
+
 from flask import (
     Blueprint,
     flash,
@@ -252,7 +254,8 @@ def VerifyLogin(func):
 
 
 def VerifyAdmin(func):
-    def NewFunc(*a, **k):
+    @functools.wraps(func)
+    def VerifyAdminWrapper(*a, **k):
         user = GetUser()
         if user and user['email'] in admins:
             return func(*a, **k)
@@ -260,7 +263,7 @@ def VerifyAdmin(func):
             flash('You are not an admin.', 'danger')
             return redirect('/')
 
-    return NewFunc
+    return VerifyAdminWrapper
 
 
 newUserCallback = None
@@ -305,6 +308,10 @@ admins = set()
 
 def AddAdmin(email):
     admins.add(email.lower())
+
+
+def GetAdmins():
+    return admins.copy()
 
 
 def GetUsers():
