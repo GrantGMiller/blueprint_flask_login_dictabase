@@ -156,7 +156,7 @@ def Forgot():
             return render_template('forgot.html')
 
         resetToken = str(uuid.uuid4())
-        resetURL = f'{request.host_url}reset_password/{resetToken}'
+        resetURL = f'/reset_password/{resetToken}'
 
         email = request.form.get('email', '').lower()
 
@@ -203,7 +203,7 @@ def MagicLink():
             if existingUser:
                 magicCode = str(uuid.uuid4())
                 existingUser['magic_code'] = magicCode
-                magicLink = f'{request.host_url}/magic_link_login?magic_code={magicCode}'
+                magicLink = f'/magic_link_login?magic_code={magicCode}'
                 if magicLinkCallback:
                     magicLinkCallback(existingUser, magicLink)
                 else:
