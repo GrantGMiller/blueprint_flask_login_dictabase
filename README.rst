@@ -19,6 +19,7 @@ Example App
         AddAdmin,
         GetUsers,
         GetUser,
+        SignedIn
     )
     import flask_dictabase
 
@@ -41,7 +42,7 @@ Example App
         return render_template('private.html', user=GetUser())
 
 
-    AddAdmin('grant@grant-miller.com') # You can add one or more "admins"
+    AddAdmin('grant@grant-miller.com')  # You can add one or more "admins"
 
 
     @app.route('/admin')
@@ -76,6 +77,13 @@ Example App
         # If they click on the magicLink, they will be logged in.
         print('MagicLinkCallback(user=', user, magicLink)
         flash('Send an email with the magic link to the user', 'info')
+
+
+    @SignedIn
+    def SignedInCallback(user):
+        print(f'SignedIn {user["email"]}')
+
+
 
 
     if __name__ == '__main__':
