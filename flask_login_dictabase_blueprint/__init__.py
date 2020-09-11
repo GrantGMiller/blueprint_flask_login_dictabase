@@ -89,6 +89,7 @@ def Login():
                         remember=True,
                         force=True,
                     )
+                    _DoSignedInCallback(userObj)
                     return redirect(request.args.get('next', None) or '/')
 
                 else:
@@ -140,6 +141,7 @@ def Register():
             flash('Your account has been created. Thank you.', 'success')
             if newUserCallback:
                 newUserCallback(newUser)
+            _DoSignedInCallback(newUser)
             return redirect(request.args.get('next', None) or '/')
 
         return render_template('register.html', )
@@ -225,6 +227,7 @@ def MagicLinkLogin():
     user = app.db.FindOne(UserClass, magic_code=magicCode)
     if user:
         flask_login.login_user(user, remember=True, force=True)
+        _DoSignedInCallback(user)
         flash('You are now logged in. :-)')
     else:
         flash('Unrecognized magic code')
@@ -288,6 +291,19 @@ magicLinkCallback = None
 def MagicLink(func):
     global magicLinkCallback
     magicLinkCallback = func
+
+
+signedInCallback = None
+
+
+def SignedIn(func):
+    global signedInCallback
+    signedInCallback = func
+
+
+def _DoSignedInCallback(user):
+    if signedInCallback:
+        signedInCallback(user)
 
 
 def LogoutUser():
