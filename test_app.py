@@ -1,3 +1,5 @@
+import time
+
 from flask import Flask, render_template, flash
 from flask_login_dictabase_blueprint import (
     bp,
@@ -9,7 +11,8 @@ from flask_login_dictabase_blueprint import (
     AddAdmin,
     GetUsers,
     GetUser,
-    SignedIn
+    SignedIn,
+    RenderTemplate,
 )
 import flask_dictabase
 
@@ -72,6 +75,12 @@ def MagicLinkCallback(user, magicLink):
 @SignedIn
 def SignedInCallback(user):
     print(f'SignedIn {user["email"]}')
+
+
+@RenderTemplate
+def RenderTemplateCallback(templateName):
+    print('RenderTemplateCallback(templateName=', templateName)
+    return {'message': f'The time is {time.asctime()}'}
 
 
 if __name__ == '__main__':

@@ -78,8 +78,10 @@ def Login():
             if userObj is None:
                 print('User with this email does not exist in db')
                 flash(LOGIN_FAILED_FLASH_MESSAGE, 'danger')
+                kwargs = renderTemplateCallback('login.html') if renderTemplateCallback else {}
                 return render_template(
                     'login.html',
+                    **kwargs,
                 )
             else:
                 if userObj.get('passwordHash', None) == passwordHash:
@@ -99,9 +101,17 @@ def Login():
 
         else:
             # user did not enter a email/password, try again
-            return render_template('login.html')
+            kwargs = renderTemplateCallback('login.html') if renderTemplateCallback else {}
+            return render_template(
+                'login.html',
+                **kwargs,
+            )
 
-    return render_template('login.html')
+    kwargs = renderTemplateCallback('login.html') if renderTemplateCallback else {}
+    return render_template(
+        'login.html',
+        **kwargs,
+    )
 
 
 @bp.route('/logout')
@@ -144,10 +154,18 @@ def Register():
             _DoSignedInCallback(newUser)
             return redirect(request.args.get('next', None) or '/')
 
-        return render_template('register.html', )
+        kwargs = renderTemplateCallback('register.html') if renderTemplateCallback else {}
+        return render_template(
+            'register.html',
+            **kwargs,
+        )
 
     else:
-        return render_template('register.html', )
+        kwargs = renderTemplateCallback('register.html') if renderTemplateCallback else {}
+        return render_template(
+            'register.html',
+            **kwargs,
+        )
 
 
 @bp.route('/forgot', methods=['GET', 'POST'])
@@ -155,7 +173,11 @@ def Forgot():
     if request.method == 'POST':
         if request.form.get('password', None) != request.form.get('passwordConfirm', None):
             flash('Passwords do not match.', 'danger')
-            return render_template('forgot.html')
+            kwargs = renderTemplateCallback('forgot.html') if renderTemplateCallback else {}
+            return render_template(
+                'forgot.html',
+                **kwargs,
+            )
 
         resetToken = str(uuid.uuid4())
         resetURL = f'/reset_password/{resetToken}'
@@ -173,7 +195,11 @@ def Forgot():
         return redirect('/')
 
     else:
-        return render_template('forgot.html')
+        kwargs = renderTemplateCallback('forgot.html') if renderTemplateCallback else {}
+        return render_template(
+            'forgot.html',
+            **kwargs,
+        )
 
 
 @bp.route('/reset_password/<resetToken>')
@@ -218,7 +244,11 @@ def MagicLink():
                     )
             flash('A magic link has been emailed to you. Click the magic link to login.')
 
-    return render_template('magic_link.html')
+    kwargs = renderTemplateCallback('magic_link.html') if renderTemplateCallback else {}
+    return render_template(
+        'magic_link.html',
+        **kwargs,
+    )
 
 
 @bp.route('/magic_link_login', methods=['GET', 'POST'])
@@ -304,6 +334,16 @@ def SignedIn(func):
 def _DoSignedInCallback(user):
     if signedInCallback:
         signedInCallback(user)
+
+
+renderTemplateCallback = None
+
+
+def RenderTemplate(func):
+    # func should accept one argument, a str indictating the template name
+    # func should return a dict of kwargs to be used when rendering the template
+    global renderTemplateCallback
+    renderTemplateCallback = func
 
 
 def LogoutUser():
