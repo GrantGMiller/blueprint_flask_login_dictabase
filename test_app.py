@@ -1,6 +1,6 @@
 import time
 
-from flask import Flask, render_template, flash
+from flask import Flask, render_template, flash, jsonify
 from flask_login_dictabase_blueprint import (
     bp,
     VerifyLogin,
@@ -13,6 +13,7 @@ from flask_login_dictabase_blueprint import (
     GetUser,
     SignedIn,
     RenderTemplate,
+    menu,
 )
 import flask_dictabase
 
@@ -81,6 +82,15 @@ def SignedInCallback(user):
 def RenderTemplateCallback(templateName):
     print('RenderTemplateCallback(templateName=', templateName)
     return {'message': f'The time is {time.asctime()}'}
+
+
+menu.AddMenuOption('Test Title', '/test_url', adminOnly=False)
+menu.AddMenuOption('Admin Title', '/admin_url', adminOnly=True)
+
+
+@app.route('/menu')
+def Menu():
+    return jsonify(menu.GetMenu())
 
 
 if __name__ == '__main__':
