@@ -86,6 +86,7 @@ def RenderTemplateCallback(templateName):
 
 menu.AddMenuOption('Test Title', '/test_url', adminOnly=False)
 menu.AddMenuOption('Admin Title', '/admin_url', adminOnly=True)
+menu.AddMenuOption('User Title', '/user_url', userOnly=True)
 
 
 @app.route('/menu')
