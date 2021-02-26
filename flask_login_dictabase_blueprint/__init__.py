@@ -149,8 +149,10 @@ def Register():
                 force=True,
             )
             flash('Your account has been created. Thank you.', 'success')
-            if newUserCallback:
-                newUserCallback(newUser)
+            if newUserCallbacks:
+                for func in newUserCallbacks:
+                    func(newUser)
+
             _DoSignedInCallback(newUser)
             return redirect(request.args.get('next', None) or '/')
 
@@ -299,12 +301,12 @@ def VerifyAdmin(func):
     return VerifyAdminWrapper
 
 
-newUserCallback = None
+newUserCallbacks = []
 
 
 def NewUser(func):
-    global newUserCallback
-    newUserCallback = func
+    global newUserCallbacks
+    newUserCallbacks.append(func)
 
 
 forgotPasswordCallback = None
