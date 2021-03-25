@@ -14,6 +14,7 @@ from flask_login_dictabase_blueprint import (
     SignedIn,
     RenderTemplate,
     menu,
+    renderTemplateCallback,
 )
 import flask_dictabase
 
@@ -81,7 +82,10 @@ def SignedInCallback(user):
 @RenderTemplate
 def RenderTemplateCallback(templateName):
     print('RenderTemplateCallback(templateName=', templateName)
-    return {'message': f'The time is {time.asctime()}'}
+    return {
+        'message': f'The time is {time.asctime()}',
+        'title': 'My Title',
+    }
 
 
 menu.AddMenuOption('Test Title', '/test_url', adminOnly=False)
