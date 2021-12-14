@@ -55,7 +55,7 @@ def Login():
     user = GetUser()
     if user:
         print('user already logged in, redirecting to "/"')
-        flash(f'You are currently logged in as "{user["email"]}".')
+        flash(f'You are currently logged in as "{user["email"]}".', 'success')
         return redirect('/')
 
     if request.method == 'POST':
@@ -244,7 +244,7 @@ def MagicLink():
                         'def MagicLinkCallback(user, magicLink):'
                         '    SendEmail(to=user["email"], body=magicLink)'
                     )
-            flash('A magic link has been emailed to you. Click the magic link to login.')
+            flash('A magic link has been emailed to you. Click the magic link to login.', 'success')
 
     kwargs = renderTemplateCallback('magic_link.html') if renderTemplateCallback else {}
     return render_template(
@@ -260,9 +260,9 @@ def MagicLinkLogin():
     if user:
         flask_login.login_user(user, remember=True, force=True)
         _DoSignedInCallback(user)
-        flash('You are now logged in. :-)')
+        flash('You are now logged in. :-)', 'success')
     else:
-        flash('Unrecognized magic code')
+        flash('Unrecognized magic code', 'danger')
     return redirect('/')
 
 
@@ -374,3 +374,10 @@ def GetAdmins():
 
 def GetUsers():
     return app.db.FindAll(UserClass)
+
+
+def IsAdmin():
+    '''
+    :return: True if the current user is an admin, False otherwise
+    '''
+    return GetUser()['email'] in GetAdmins() if GetUser() else False
