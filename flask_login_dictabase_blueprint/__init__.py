@@ -1,16 +1,17 @@
 import functools
+import hashlib
+import uuid
+import warnings
 
+import flask_dictabase
+import flask_login
 from flask import (
     Blueprint,
     flash,
     redirect,
     request,
-    render_template
+    render_template, Flask
 )
-import flask_dictabase
-import flask_login
-import hashlib
-import uuid
 
 LOGIN_FAILED_FLASH_MESSAGE = 'Username and/or Password is incorrect. Please try again.'
 bp = Blueprint('login', __name__, template_folder='templates')
@@ -29,13 +30,13 @@ app = None
 
 
 @bp.record
-def Record(state):
+def record(state):
     global app
     app = state.app
     print('Record(state=', state)
 
     if not hasattr(state.app, 'db'):
-        raise KeyError('state has not attribute "db". You must run flask_dictabase.Dictabase(app) first.')
+        raise KeyError('state has no attribute "db". You must run flask_dictabase.Dictabase(app) first.')
 
     if not state.app.config.get('SECRET_KEY', None):
         raise KeyError(
@@ -51,8 +52,8 @@ def Record(state):
 
 
 @bp.route('/login', methods=['GET', 'POST'])
-def Login():
-    user = GetUser()
+def login_page():
+    user = get_current_user()
     if user:
         print('user already logged in, redirecting to "/"')
         flash(f'You are currently logged in as "{user["email"]}".', 'success')
@@ -64,7 +65,7 @@ def Login():
         email = email.lower() if email else None
 
         password = request.form.get('password', None)
-        passwordHash = HashIt(password, salt=email) if password else None
+        passwordHash = get_hash(password, salt=email) if password else None
 
         if password is None:
             flash('Please enter a password.', 'danger')
@@ -91,7 +92,7 @@ def Login():
                         remember=True,
                         force=True,
                     )
-                    _DoSignedInCallback(userObj)
+                    _do_signed_in_callback(userObj)
                     return redirect(request.args.get('next', None) or '/')
 
                 else:
@@ -115,13 +116,13 @@ def Login():
 
 
 @bp.route('/logout')
-def Logout():
-    LogoutUser()
+def logout_current_user():
+    logout_user()
     return redirect('/')
 
 
 @bp.route('/register', methods=['GET', 'POST'])
-def Register():
+def register_new_user():
     email = request.form.get('email', None)
     email = email.lower() if email else None
 
@@ -141,7 +142,7 @@ def Register():
             newUser = app.db.New(
                 UserClass,
                 email=email.lower(),
-                passwordHash=HashIt(password, salt=email),
+                passwordHash=get_hash(password, salt=email),
             )
             flask_login.login_user(
                 newUser,
@@ -153,7 +154,7 @@ def Register():
                 for func in newUserCallbacks:
                     func(newUser)
 
-            _DoSignedInCallback(newUser)
+            _do_signed_in_callback(newUser)
             return redirect(request.args.get('next', None) or '/')
 
         kwargs = renderTemplateCallback('register.html') if renderTemplateCallback else {}
@@ -171,7 +172,7 @@ def Register():
 
 
 @bp.route('/forgot', methods=['GET', 'POST'])
-def Forgot():
+def forgot_requested():
     if request.method == 'POST':
         if request.form.get('password', None) != request.form.get('passwordConfirm', None):
             flash('Passwords do not match.', 'danger')
@@ -191,7 +192,7 @@ def Forgot():
             pass
         else:
             user['resetToken'] = resetToken
-            user['tempPasswordHash'] = HashIt(request.form.get('password'), salt=email)
+            user['tempPasswordHash'] = get_hash(request.form.get('password'), salt=email)
             if forgotPasswordCallback:
                 forgotPasswordCallback(user, resetURL)
         return redirect('/')
@@ -205,7 +206,7 @@ def Forgot():
 
 
 @bp.route('/reset_password/<resetToken>')
-def ResetPassword(resetToken):
+def reset_password_token_submitted(resetToken):
     user = app.db.FindOne(UserClass, resetToken=resetToken)
     if user:
         tempHash = user.get('tempPasswordHash', None)
@@ -221,7 +222,7 @@ def ResetPassword(resetToken):
 
 
 @bp.route('/magic_link', methods=['GET', 'POST'])
-def MagicLink():
+def magic_link_submitted():
     if request.method == 'POST':
         email = request.form.get('email', None)
         email = email.lower() if email else None
@@ -254,19 +255,19 @@ def MagicLink():
 
 
 @bp.route('/magic_link_login', methods=['GET', 'POST'])
-def MagicLinkLogin():
+def magic_link_login():
     magicCode = request.args.get('magic_code', None)
     user = app.db.FindOne(UserClass, magic_code=magicCode)
     if user:
         flask_login.login_user(user, remember=True, force=True)
-        _DoSignedInCallback(user)
+        _do_signed_in_callback(user)
         flash('You are now logged in. :-)', 'success')
     else:
         flash('Unrecognized magic code', 'danger')
     return redirect('/')
 
 
-def GetUser(email=None):
+def get_current_user(email=None):
     # return user object if logged in, else return None
     # if user provides an email then return that user obj
     if email:
@@ -278,7 +279,7 @@ def GetUser(email=None):
     return user
 
 
-def VerifyLogin(func):
+def verify_is_user(func):
     '''
     Use this decorator on view's that require a log in, it will auto redirect to login page
     :param func:
@@ -288,23 +289,23 @@ def VerifyLogin(func):
     return flask_login.login_required(func)
 
 
-def VerifyAdmin(func):
+def verify_is_admin(func):
     @functools.wraps(func)
-    def VerifyAdminWrapper(*a, **k):
-        user = GetUser()
+    def verify_admin_wrapper(*a, **k):
+        user = get_current_user()
         if user and user['email'] in admins:
             return func(*a, **k)
         else:
             flash('You are not an admin.', 'danger')
             return redirect('/')
 
-    return VerifyAdminWrapper
+    return verify_admin_wrapper
 
 
 newUserCallbacks = []
 
 
-def NewUser(func):
+def new_user(func):
     global newUserCallbacks
     newUserCallbacks.append(func)
 
@@ -312,7 +313,7 @@ def NewUser(func):
 forgotPasswordCallback = None
 
 
-def ForgotPassword(func):
+def forgot_password(func):
     global forgotPasswordCallback
     forgotPasswordCallback = func
 
@@ -320,7 +321,7 @@ def ForgotPassword(func):
 magicLinkCallback = None
 
 
-def MagicLink(func):
+def on_magic_link_created(func):
     global magicLinkCallback
     magicLinkCallback = func
 
@@ -328,12 +329,12 @@ def MagicLink(func):
 signedInCallback = None
 
 
-def SignedIn(func):
+def on_signin(func):
     global signedInCallback
     signedInCallback = func
 
 
-def _DoSignedInCallback(user):
+def _do_signed_in_callback(user):
     if signedInCallback:
         signedInCallback(user)
 
@@ -341,19 +342,19 @@ def _DoSignedInCallback(user):
 renderTemplateCallback = None
 
 
-def RenderTemplate(func):
+def do_render_template(func):
     # func should accept one argument, a str indictating the template name
     # func should return a dict of kwargs to be used when rendering the template
     global renderTemplateCallback
     renderTemplateCallback = func
 
 
-def LogoutUser():
+def logout_user():
     print('LogoutUser()')
     flask_login.logout_user()
 
 
-def HashIt(strng, salt=''):
+def get_hash(strng, salt=''):
     salt = app.config.get('SECRET_KEY', '') + salt
     hash1 = hashlib.sha512(bytes(strng, 'utf-8')).hexdigest()
     hash1 += salt
@@ -364,20 +365,37 @@ def HashIt(strng, salt=''):
 admins = set()
 
 
-def AddAdmin(email):
+def add_admin(email):
     admins.add(email.lower())
 
 
-def GetAdmins():
+def get_admins():
     return admins.copy()
 
 
-def GetUsers():
+def get_users():
+    warnings.warn(
+        f"Function GetUsers is deprecated. We are moving to pep8. Please use get_users() in the future.",
+        category=DeprecationWarning,
+        stacklevel=2
+    )
     return app.db.FindAll(UserClass)
 
 
-def IsAdmin():
+def is_admin():
     '''
     :return: True if the current user is an admin, False otherwise
     '''
-    return GetUser()['email'] in GetAdmins() if GetUser() else False
+    return get_current_user()['email'] in get_admins() if get_current_user() else False
+
+
+def get_app(config):
+    '''
+    A quick way to get the app with the blueprint already applied
+    :return:
+    '''
+    new_app = Flask('Test Page')
+    new_app.config['SECRET_KEY'] = config['SECRET_KEY'] if isinstance(config, dict) else config.SECRET_KEY
+    new_app.db = flask_dictabase.Dictabase(new_app)
+    new_app.register_blueprint(bp)
+    return new_app

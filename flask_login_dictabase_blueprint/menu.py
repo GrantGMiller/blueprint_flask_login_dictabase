@@ -1,4 +1,4 @@
-from flask_login_dictabase_blueprint import GetUser, admins
+from flask_login_dictabase_blueprint import get_current_user, admins
 
 menu = []
 
@@ -9,7 +9,7 @@ def GetMenu(active=None):
     for item in m:
         item['active'] = item['title'] == active
 
-    user = GetUser()
+    user = get_current_user()
     if user:
         m.append(dict(title='Logout', url='/logout', active=False))
     else:
