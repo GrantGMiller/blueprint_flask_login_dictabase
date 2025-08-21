@@ -8,10 +8,23 @@ import flask_login
 from flask import (
     Blueprint,
     flash,
+    jsonify,
     redirect,
     request,
-    render_template, Flask
+    render_template as flask_render_template, Flask
 )
+
+
+def render_template(template_name, **kwargs):
+    try:
+        return flask_render_template(template_name, **kwargs)
+    except Exception as e:
+        print(e)
+        user = get_current_user()
+        if user:
+            return jsonify({'email': user['email']})
+        return jsonify({"result": "no user"}), 401
+
 
 LOGIN_FAILED_FLASH_MESSAGE = 'Username and/or Password is incorrect. Please try again.'
 bp = Blueprint('login', __name__, template_folder='templates')
@@ -57,6 +70,7 @@ def login_page():
     if user:
         print('user already logged in, redirecting to "/"')
         flash(f'You are currently logged in as "{user["email"]}".', 'success')
+
         return redirect('/')
 
     if request.method == 'POST':
@@ -80,6 +94,7 @@ def login_page():
                 print('User with this email does not exist in db')
                 flash(LOGIN_FAILED_FLASH_MESSAGE, 'danger')
                 kwargs = renderTemplateCallback('login.html') if renderTemplateCallback else {}
+
                 return render_template(
                     'login.html',
                     **kwargs,
@@ -102,7 +117,7 @@ def login_page():
 
         else:
             # user did not enter a email/password, try again
-            kwargs = renderTemplateCallback('login.html') if renderTemplateCallback else {}
+            kwargs = ('login.html') if renderTemplateCallback else {}
             return render_template(
                 'login.html',
                 **kwargs,
@@ -121,13 +136,26 @@ def logout_current_user():
     return redirect('/')
 
 
+def get_request_data(key: str, default=None):
+    ret = request.form.get(key, None) or \
+          request.args.get(key, None)
+
+    if not ret and request.is_json:
+        ret = request.json.get(key, None)
+
+    if not ret:
+        ret = default
+
+    return ret
+
+
 @bp.route('/register', methods=['GET', 'POST'])
 def register_new_user():
-    email = request.form.get('email', None)
+    email = get_request_data('email', None)
     email = email.lower() if email else None
 
-    password = request.form.get('password', None)
-    passwordConfirm = request.form.get('passwordConfirm', None)
+    password = get_request_data('password', None)
+    passwordConfirm = get_request_data('passwordConfirm', None)
 
     if request.method == 'POST':
         if email is None:
@@ -174,7 +202,7 @@ def register_new_user():
 @bp.route('/forgot', methods=['GET', 'POST'])
 def forgot_requested():
     if request.method == 'POST':
-        if request.form.get('password', None) != request.form.get('passwordConfirm', None):
+        if get_request_data('password', None) != get_request_data('passwordConfirm', None):
             flash('Passwords do not match.', 'danger')
             kwargs = renderTemplateCallback('forgot.html') if renderTemplateCallback else {}
             return render_template(
@@ -185,14 +213,14 @@ def forgot_requested():
         resetToken = str(uuid.uuid4())
         resetURL = f'/reset_password/{resetToken}'
 
-        email = request.form.get('email', '').lower()
+        email = get_request_data('email', '').lower()
 
         user = app.db.FindOne(UserClass, email=email)
         if user is None:
             pass
         else:
             user['resetToken'] = resetToken
-            user['tempPasswordHash'] = get_hash(request.form.get('password'), salt=email)
+            user['tempPasswordHash'] = get_hash(get_request_data('password'), salt=email)
             if forgotPasswordCallback:
                 forgotPasswordCallback(user, resetURL)
         return redirect('/')
@@ -224,7 +252,7 @@ def reset_password_token_submitted(resetToken):
 @bp.route('/magic_link', methods=['GET', 'POST'])
 def magic_link_submitted():
     if request.method == 'POST':
-        email = request.form.get('email', None)
+        email = get_request_data('email', None)
         email = email.lower() if email else None
         if email is None:
             flash('Please enter your email address.')

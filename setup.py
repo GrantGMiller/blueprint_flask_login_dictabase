@@ -6,12 +6,14 @@ this_directory = path.abspath(path.dirname(__file__))
 with open(path.join(this_directory, 'README.rst'), encoding='utf-8') as f:
     long_description = f.read()
 
-packages = ['flask_login_dictabase_blueprint'] # the local filesystem package path
+packages = ['flask_login_dictabase_blueprint']  # the local filesystem package path
 
 setup(
     name="flask_login_dictabase_blueprint",
 
-    version="2.0.0",  # updated to pep8 style guide, added get_app() function for ease of use
+    version="2.0.2",  # added failsafe if templates are not configured, just return the jsonify(user)
+    # version="2.0.1",  # updated README
+    # version="2.0.0",  # updated to pep8 style guide, added get_app() function for ease of use
 
     packages=packages,
     install_requires=[
