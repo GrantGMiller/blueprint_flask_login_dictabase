@@ -11,7 +11,7 @@ packages = ['flask_login_dictabase_blueprint']  # the local filesystem package p
 setup(
     name="flask_login_dictabase_blueprint",
 
-    version="2.0.2",  # added failsafe if templates are not configured, just return the jsonify(user)
+    version="2.0.3",  # added failsafe if templates are not configured, just return the jsonify(user)
     # version="2.0.1",  # updated README
     # version="2.0.0",  # updated to pep8 style guide, added get_app() function for ease of use
 
